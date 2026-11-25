@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Geschenke fangen</title>
+<style>
+  body{margin:0;background:linear-gradient(#ffe6f0,#fff6b3);display:flex;flex-direction:column;align-items:center;font-family:Arial,sans-serif;color:#d6277a;touch-action:none}
+  h1{margin:8px 0 2px;font-size:24px}
+  canvas{border:4px solid #ff6fb5;border-radius:16px;background:linear-gradient(#ffd1e8,#fff3a8);max-width:96vw}
+  p{margin:4px;font-size:14px}
+</style>
+</head>
+<body>
+<h1>🍬 Geschenke fangen 🧸</h1>
+<canvas id="c" width="360" height="520"></canvas>
+<p>Bewege den Korb mit Maus, Finger oder Pfeiltasten.</p>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');
+const W=c.width,H=c.height;
+const types=[
+ {e:'🍬',p:1},{e:'😊',p:2},{e:'🧸',p:3},
+ {e:'👛',p:4},{e:'🐩',p:5},{e:'earring',p:3}
+];
+let basket,items,score,lives,t,over,started,speed,keys={};
+
+function reset(){
+  basket={x:W/2,w:80};items=[];score=0;lives=3;t=0;over=false;speed=2;
+}
+reset();started=false;
+
+function drawEarring(px,py){
+  x.strokeStyle='#e0a800';x.lineWidth=2;
+  [-9,9].forEach(o=>{
+    x.beginPath();x.arc(px+o,py-10,3,0,7);x.stroke();
+    x.beginPath();x.moveTo(px+o,py-7);x.lineTo(px+o,py);x.stroke();
+    x.fillStyle='#ff4fa3';x.beginPath();x.arc(px+o,py+7,8,0,7);x.fill();
+    x.fillStyle='#fff';x.beginPath();x.arc(px+o-2,py+4,2.5,0,7);x.fill();
+  });
+}
+
+function move(px){basket.x=Math.max(basket.w/2,Math.min(W-basket.w/2,px))}
+function pos(e){const r=c.getBoundingClientRect();const cx=(e.touches?e.touches[0].clientX:e.clientX);return (cx-r.left)*W/r.width}
+c.addEventListener('mousemove',e=>move(pos(e)));
+c.addEventListener('touchmove',e=>{move(pos(e));e.preventDefault()},{passive:false});
+c.addEventListener('touchstart',e=>{move(pos(e))});
+c.addEventListener('click',()=>{if(!started){started=true}else if(over){reset()}});
+addEventListener('keydown',e=>{keys[e.key]=1;if(!started)started=true;else if(over&&e.key==' ')reset()});
+addEventListener('keyup',e=>keys[e.key]=0);
+
+function spawn(){
+  const k=types[Math.floor(Math.random()*types.length)];
+  items.push({...k,x:20+Math.random()*(W-40),y:-20,r:Math.random()*2-1});
+}
+
+function update(){
+  t++;
+  if(keys.ArrowLeft)move(basket.x-6);
+  if(keys.ArrowRight)move(basket.x+6);
+  if(t%Math.max(25,60-Math.floor(score/5)*2)===0)spawn();
+  speed=2+score/25;
+  items.forEach(i=>i.y+=speed);
+  items=items.filter(i=>{
+    if(i.y>H-55&&i.y<H-25&&Math.abs(i.x-basket.x)<basket.w/2+8){score+=i.p;return false}
+    if(i.y>H){lives--;if(lives<=0)over=true;return false}
+    return true;
+  });
+}
+
+function draw(){
+  x.clearRect(0,0,W,H);
+  x.textAlign='center';
+  for(let i=0;i<8;i++){x.fillStyle=i%2?'rgba(255,255,255,.25)':'rgba(255,111,181,.12)';x.fillRect(i*45,0,45,H)}
+  items.forEach(i=>{
+    if(i.e==='earring')drawEarring(i.x,i.y);
+    else{x.font='32px serif';x.fillText(i.e,i.x,i.y+10)}
+  });
+  x.fillStyle='#ff4fa3';
+  x.beginPath();x.roundRect(basket.x-basket.w/2,H-45,basket.w,28,[4,4,16,16]);x.fill();
+  x.fillStyle='#ffe14d';x.fillRect(basket.x-basket.w/2,H-45,basket.w,6);
+  x.fillStyle='#d6277a';x.font='bold 18px Arial';
+  x.fillText('Punkte: '+score,70,26);
+  x.fillText('❤️'.repeat(Math.max(lives,0)),W-50,26);
+  if(!started||over){
+    x.fillStyle='rgba(255,255,255,.85)';x.fillRect(30,170,W-60,160);
+    x.fillStyle='#d6277a';x.font='bold 24px Arial';
+    x.fillText(over?'Spiel vorbei!':'Geschenke fangen',W/2,215);
+    x.font='16px Arial';
+    x.fillText(over?'Dein Ergebnis: '+score+' Punkte':'🍬1 😊2 🧸3 👛4 🐩5',W/2,248);
+    x.fillText(over?'Tippen oder Leertaste: nochmal':'Tippen oder Taste zum Start',W/2,285);
+  }
+}
+
+function loop(){
+  if(started&&!over)update();
+  draw();requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
